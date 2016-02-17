@@ -280,9 +280,9 @@ void free_text(int argc, char **args)
 	int c, n;
 	
 	n = 0;
-	while ((c = getc()) != 256 + ESC_SC)
+	while ((c = getc()) != ESC_SC << 8)
 	{
-		if (c == 256 + PRTSCN_SC)
+		if (c == PRTSCN_SC << 8)
 			while (n > 0)
 			{
 				putc('\b');

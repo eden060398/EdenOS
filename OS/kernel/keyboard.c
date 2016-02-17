@@ -195,9 +195,7 @@ int getc(void)
 		while (!kbhit)
 			HALT();
 		kbhit = false;
-		if (last)
-			return last;
-		return 256 + last_sc;
+		return last;
 	}
 }
 
