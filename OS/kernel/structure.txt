@@ -1,0 +1,12 @@
+Physical Memory:
+0x00008000 - MainKernel
+0x00015000 - BIOS Memory Map
+0x00016000 - BIOS Memory Map Size (2 Bytes)
+0x000B8000 - Video Memory
+0x00100000 - Page Index
+0x00200000 - Beginning of non-kernel-bound memory
+
+Error Types:
+0x00 - Kernel Internal Error
+0x01 - Kernel Internal Parameters
+0xFF - TD Error

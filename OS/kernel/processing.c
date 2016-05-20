@@ -316,7 +316,8 @@ void dispose_thread(void)
 void wait(uint32_t *status)
 {
 	current_node->status = IDLE;
-	while (*status);
+	while (*status)
+		HALT();
 	current_node->status = ACTIVE;
 }
 
@@ -420,7 +421,7 @@ void set_idle(void)
 // Return Value	:	None
 //
 // -----------------------------------------------------------------------------
-void set_actice(void)
+void set_active(void)
 {
 	current_node->status = ACTIVE;
 }

@@ -8,7 +8,7 @@
 	db 0x00
 	dw %2
 	dd 0x08000000
-	dq 1
+	dq 0x01
 	%%reset:
 		xor ax, ax
 		xor dh, dh
@@ -24,7 +24,7 @@
 		int 0x13
 		jc %%load
 %endmacro
-	
+
 ; -------------------- CODE --------------------
 start:	
 	xor ax, ax
@@ -87,5 +87,6 @@ pmode:
 
 
 ; -------------------- END ---------------------
-times 510-($-$$) db 0
+times 506-($-$$) db 0
+dd 100
 dw 0xAA55

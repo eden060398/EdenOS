@@ -9,7 +9,9 @@
 
 void *memset(void *str, int c, uint32_t n)
 {
-	unsigned char *p = (unsigned char*) str;
+	unsigned char *p;
+	
+	p = (unsigned char*) str;
 	while (n--)
 		*p++ = (unsigned char) c;
 	return str;
@@ -118,6 +120,20 @@ int strcmp(const char *s1, const char *s2)
 	return -1;
 }
 
+int memcmp(const char *s1, const char *s2, uint32_t n)
+{
+	while (*s1 == *s2 && n--)
+	{
+		s1++;
+		s2++;
+	}
+	if (*s1 == *s2)
+		return 0;
+	if (*s1 > *s2)
+		return 1;
+	return -1;
+}
+
 char *strcpy(char *dest, const char *src)
 {
 	char *pdest;
@@ -139,9 +155,9 @@ void *memcpy(void *dest, void *src, uint32_t n)
 	return dest;
 }
 
-size_t strlen(const char *s)
+uint32_t strlen(const char *s)
 {
-	size_t n;
+	uint32_t n;
 	
 	n = 0;
 	while (*s++)

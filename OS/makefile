@@ -13,7 +13,7 @@ BOOTLOADER_ASM:=boot/bootloader$(BITS).asm
 BOOTLOADER_SRC_FILES:=$(BOOTLOADER_ASM) boot/memory.asm
 BOOTLOADER:=boot/bootloader$(BITS)
 
-INCLUDE_OBJ_FILES:=kernel/console.o kernel/string.o kernel/idt$(BITS).o kernel/interrupts$(BITS).o kernel/keyboard.o kernel/time.o kernel/cmd.o kernel/memory.o kernel/dmemory.o kernel/paging.o kernel/processing.o
+INCLUDE_OBJ_FILES:=kernel/console.o kernel/string.o kernel/idt$(BITS).o kernel/interrupts$(BITS).o kernel/keyboard.o kernel/time.o kernel/cmd.o kernel/memory.o kernel/dmemory.o kernel/paging.o kernel/processing.o kernel/pci.o kernel/usb.o kernel/bbb.o kernel/scsi.o kernel/edenfs.o
 
 all: kernel$(BITS).img
 
@@ -35,4 +35,4 @@ kernel/%.o: include_src/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
-	rm kernel$(BITS).img $(KERNEL) $(BOOTLOADER) $(KERNEL_OBJ_FILES) $(INCLUDE_OBJ_FILES)
+	rm -f kernel$(BITS).img $(KERNEL) $(BOOTLOADER) $(KERNEL_OBJ_FILES) $(INCLUDE_OBJ_FILES)

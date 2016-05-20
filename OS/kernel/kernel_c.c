@@ -22,6 +22,8 @@ void kernel_main(void)
 	init_time();
 	puts("INITIATING PROCESSING...\n");
 	init_processing();
+	puts("INITIATING UHCI SUPPORTED DEVICES...\n");
+	init_uhci();
 	puts("INITIATING KEYBOARD...\n");
 	init_keyboard();
 	puts("INITIATING COMMAND PROMPT...\n");

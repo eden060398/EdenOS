@@ -41,12 +41,6 @@
 // Programmer	:	Eden Frenkel
 // -----------------------------------------------------------------------------
 
-enum COLOR
-{
-	BLACK, BLUE, GREEN, CYAN, RED, MAGENTA, BROWN, LIGHT_GRAY, DARK_GRAY, LIGHT_BLUE,
-	LIGHT_GREEN, LIGHT_CYAN, LIGHT_RED, LIGHT_MAGENTA, YELLOW, WHITE
-};
-
 static uint16_t *current, *start, *end;
 static uint16_t color;
 static bool update_cursor_bool;
@@ -323,4 +317,14 @@ void clear_screen(void)
 		*current++ = color;
 	current = start;
 	update_crusor();
+}
+
+uint32_t get_current(void)
+{
+	return current - B_START;
+}
+
+void set_color(uint8_t fore, uint8_t back)
+{
+	color = (fore << 8) | back;
 }

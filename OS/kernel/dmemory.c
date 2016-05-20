@@ -160,8 +160,8 @@ void *malloc(size_t size)
 }
 
 // -----------------------------------------------------------------------------
-// malloc
-// ------
+// free
+// ----
 // 
 // General		:	The fuctions deallocates allocated memory.
 //

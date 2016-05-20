@@ -40,7 +40,7 @@
 // Programmer	:	Eden Frenkel
 // -----------------------------------------------------------------------------
 
-static int secs, mins, hrs, ticks;
+static uint32_t secs, mins, hrs, ticks;
 char current_time[9] = "00:00:00";
 static uint8_t status;
 static unsigned int switch_counter;
@@ -194,4 +194,26 @@ void init_switch(unsigned int count)
 {
 	switch_counter = count;
 	init = 1;
+}
+
+void wait_ticks(int n)
+{
+	uint32_t prev_ticks, prev_secs, prev_mins, prev_hrs, passed;
+	
+	while (n)
+	{
+		prev_ticks = ticks;
+		prev_secs = secs;
+		prev_mins = mins;
+		prev_hrs = hrs;
+		while (	prev_ticks == ticks &&
+				prev_secs == secs &&
+				prev_mins == mins &&
+				prev_hrs == hrs)
+			HALT();
+		passed = (((hrs - prev_hrs) * 60 + mins - prev_mins) * 60 + secs - prev_secs) * 1024 + ticks - prev_ticks;
+		if (passed >= n)
+			return;
+		n -= passed;
+	}
 }

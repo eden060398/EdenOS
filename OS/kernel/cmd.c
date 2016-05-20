@@ -19,6 +19,11 @@
 #define ESC_SC 0x01
 #define PRTSCN_SC 0x37
 
+#define TYPE_UNDEFINED			0
+#define TYPE_DIR				1
+#define TYPE_FILE				2
+
+
 // -----------------------------------------------------------------------------
 // Command-Prompt Module
 // ---------------------
@@ -47,14 +52,24 @@ static int next;
 
 
 // COMMANDS DECLARATIONS
-void clear(int argc, char **args);
-void print_args(int argc, char **args);
-void free_text(int argc, char **args);
-void mmap(int argc, char **args);
-void just_palloc(int argc, char **args);
-void proc_view(int argc, char **args);
-void inf_loop(int argc, char **args);
-void kill_thread(int argc, char **args);
+void clear_cmd(int argc, char **args);
+void print_args_cmd(int argc, char **args);
+void free_text_cmd(int argc, char **args);
+void mmap_cmd(int argc, char **args);
+void just_palloc_cmd(int argc, char **args);
+void proc_view_cmd(int argc, char **args);
+void inf_loop_cmd(int argc, char **args);
+void kill_thread_cmd(int argc, char **args);
+void enum_dev_cmd(int argc, char **args);
+/*
+void print_mdev_port_cmd(int argc, char **args);
+void read_main_dev_cmd(int argc, char **args);
+void write_main_dev_cmd(int argc, char **args);
+void enum_usb_cmd(int argc, char **args);
+*/
+void list_cmd(int argc, char **args);
+void change_dir_cmd(int argc, char **args);
+void read_cmd(int argc, char **args);
 
 // FUNCTION DECLARATIONS
 void init_command_prompt(void);
@@ -80,14 +95,24 @@ void init_command_prompt(void)
 	next = 0;
 	
 	// Add commands.
-	add_command("clear", &clear);
-	add_command("print-args", &print_args);
-	add_command("free-text", &free_text);
-	add_command("mmap", &mmap);
-	add_command("just-palloc", &just_palloc);
-	add_command("proc-view", &proc_view);
-	add_command("inf-loop", &inf_loop);
-	add_command("kill-thread", &kill_thread);
+	add_command("clear", &clear_cmd);
+	add_command("print-args", &print_args_cmd);
+	add_command("free-text", &free_text_cmd);
+	add_command("mmap", &mmap_cmd);
+	add_command("just-palloc", &just_palloc_cmd);
+	add_command("proc-view", &proc_view_cmd);
+	add_command("inf-loop", &inf_loop_cmd);
+	add_command("kill-thread", &kill_thread_cmd);
+	add_command("edev", &enum_dev_cmd);
+	/*
+	add_command("main-dev", &print_mdev_port_cmd);
+	add_command("read-main-dev", &read_main_dev_cmd);
+	add_command("write-main-dev", &write_main_dev_cmd);
+	add_command("enum-usb", &enum_usb_cmd);
+	*/
+	add_command("list", &list_cmd);
+	add_command("cd", &change_dir_cmd);
+	add_command("read", &read_cmd);
 	
 	// Initiate the command-prompt.
 	command_prompt();
@@ -249,6 +274,7 @@ void command_prompt(void)
 	
 	while (1)
 	{
+		puts(working_dir);
 		puts(" >>> ");
 		gets(input, MAX_INPUT);
 		// Set not to wait if the first char of the input is '~'.
@@ -261,12 +287,12 @@ void command_prompt(void)
 
 // COMMANDS
 
-void clear(int argc, char **args)
+void clear_cmd(int argc, char **args)
 {
 	clear_screen();
 }
 
-void print_args(int argc, char **args)
+void print_args_cmd(int argc, char **args)
 {
 	while (argc--)
 	{
@@ -275,10 +301,27 @@ void print_args(int argc, char **args)
 	}
 }
 
-void free_text(int argc, char **args)
+void free_text_cmd(int argc, char **args)
 {
-	int c, n;
+	int c;
+	uint32_t n;
+	char *path;
+	File *f;
+	char *buff;
 	
+	path = 0;
+	while (argc--)
+	{
+		if (startswith(*args, "path="))
+		{
+			path = *args + 5;
+			f = open(path, strlen(path), 'w');
+			if (f)
+				break;
+		}
+	}
+	
+	buff = (char *) palloc();
 	n = 0;
 	while ((c = getc()) != ESC_SC << 8)
 	{
@@ -286,6 +329,7 @@ void free_text(int argc, char **args)
 			while (n > 0)
 			{
 				putc('\b');
+				*(buff + n) = 0;
 				n--;
 			}
 		else if (c == '\b')
@@ -293,25 +337,36 @@ void free_text(int argc, char **args)
 			if (n > 0)
 			{
 				putc(c);
+				*(buff + n) = 0;
 				n--;
 			}
 		}
 		else if (c < 256)
 		{
-			putc(c);
-			n++;
+			if (n < 4096)
+			{
+				putc(c);
+				*(buff + n) = (char) c;
+				n++;
+			}
 		}
 	}
-	
+	*(buff + n) = 0;
+	if (f)
+	{
+		write_to_file(f, buff, n);
+		free((void *) f);
+	}
+	pfree((void *) buff);
 	putc('\n');
 }
 
-void mmap(int argc, char **args)
+void mmap_cmd(int argc, char **args)
 {
 	print_bios_mmap();
 }
 
-void just_palloc(int argc, char **args)
+void just_palloc_cmd(int argc, char **args)
 {
 	char *buff;
 	buff = malloc(100);
@@ -320,7 +375,7 @@ void just_palloc(int argc, char **args)
 	free(buff);
 }
 
-void proc_view(int argc, char **args)
+void proc_view_cmd(int argc, char **args)
 {
 	int with_pid, with_ppid, with_status, with_threads, with_tid, with_tstatus;
 	
@@ -344,13 +399,13 @@ void proc_view(int argc, char **args)
 	print_proc_data(with_pid, with_ppid, with_status, with_threads, with_tid, with_tstatus);
 }
 
-void inf_loop(int argc, char **args)
+void inf_loop_cmd(int argc, char **args)
 {
 	set_idle();
 	while (1) ;
 }
 
-void kill_thread(int argc, char **args)
+void kill_thread_cmd(int argc, char **args)
 {
 	uint32_t pid, tid;
 	
@@ -371,4 +426,179 @@ void kill_thread(int argc, char **args)
 		kill_th(pid, tid);
 	else
 		puts("Invalid parameters.\n");
+}
+
+void enum_dev_cmd(int argc, char **args)
+{
+	print_enum_dev();
+}
+
+/*
+void print_mdev_port_cmd(int argc, char **args)
+{
+	char *buff;
+	
+	if (main_dev)
+	{
+		buff = malloc(10);
+		puts("0x");
+		puts(uitoa(main_dev->base_port, buff, BASE16));
+		putc('\n');
+		free(buff);
+	}
+}
+
+void read_main_dev_cmd(int argc, char **args)
+{
+	uint32_t block, i;
+	void *ptr;
+	uint8_t *ptr8;
+	char *buff;
+	
+	if (main_dev && argc == 1)
+	{
+		block = atoui(*args);
+		
+		ptr = malloc(512);
+		read_bbb(main_dev, block, 1, ptr);
+		ptr8 = ptr;
+		buff = malloc(5);
+		for (i = 0; i < 512; i++)
+		{
+			if (*ptr8 <= 0xF)
+				putc('0');
+			puts(uitoa(*ptr8++, buff, BASE16));
+		}
+		putc('\n');
+		free(buff);
+		//free(ptr);
+	}
+}
+
+void write_main_dev_cmd(int argc, char **args)
+{
+	uint32_t block;
+	void *ptr;
+	int result;
+	char *buff;
+	
+	if (main_dev && argc == 1)
+	{
+		block = atoui(*args);
+		
+		ptr = malloc(512);
+		//read_bbb(main_dev, 0, 1, ptr);
+		*((uint16_t *) (ptr)) = 0xEDE2;
+		
+		result = write_bbb(main_dev, block, 1, ptr);
+		
+		buff = malloc(10);
+		puts(uitoa(result, buff, BASE16));
+		putc('\n');
+		free(buff);
+		free(ptr);
+	}
+}
+
+void enum_usb_cmd(int argc, char **args)
+{
+	UHCIDevice *temp;
+	
+	temp = main_dev;
+	while (temp)
+	{
+		putc(temp->tag);
+		putc('\n');
+		temp = temp->next;
+	}
+}
+*/
+
+void list_cmd(int argc, char **args)
+{
+	int tree, size;
+	char *path;
+	
+	path = working_dir;
+	tree = 0;
+	size = 0;
+	while (argc--)
+	{
+		if (startswith(*args, "path="))
+			path = *args + 5;
+		else if (!strcmp(*args, "tree"))
+			tree = 1;
+		else if (!strcmp(*args, "size"))
+			size = 1;
+		args++;
+	}
+	list(path, strlen(path), tree, size);
+}
+
+void change_dir_cmd(int argc, char **args)
+{	
+	if (argc >= 1)
+	{
+		if (**args == '/')
+		{
+			if (strlen(*args) == 1)
+			{
+				free((void *) working_dir);
+				working_dir = (char *) malloc(2);
+				*working_dir = '/';
+			}
+			
+			else if (!is_path(*args, strlen(*args), TYPE_DIR, 0))
+			{
+				free((void *) working_dir);
+				working_dir = (char *) malloc(strlen(*args));
+				strcpy(working_dir, *args);
+			}
+		}
+	}
+}
+
+void read_cmd(int argc, char **args)
+{
+	char *path;
+	File *f;
+	char *buff;
+	uint32_t i, len;
+	
+	path = 0;
+	while (argc--)
+	{
+		if (startswith(*args, "path="))
+		{
+			path = *args + 5;
+			f = open(path, strlen(path), 'r');
+			if (f)
+				break;
+		}
+	}
+	if (!f)
+		return;
+	
+	clear_screen();
+	buff = (char *) palloc();
+	while ((len = read_from_file(f, 4096, buff)))
+	{
+		f->r_seek += len;
+		for (i = 0; i < len; i++)
+		{
+			if (get_current() / 80 >= 21)
+			{
+				set_color(RED, BLACK);
+				puts("\nPRESS ANY KEY TO CONTINUE");
+				set_color(LIGHT_GRAY, BLACK);
+				getc();
+				clear_screen();
+			}
+			putc(*(buff + i));
+		}
+	}
+	
+	free((void *) f);
+	pfree((void *) buff);
+	putc('\n');
 }
