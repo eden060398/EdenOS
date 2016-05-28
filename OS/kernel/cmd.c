@@ -23,6 +23,10 @@
 #define TYPE_DIR				1
 #define TYPE_FILE				2
 
+#define CALL_TYPE_NORMAL		0
+#define CALL_TYPE_HELP			1
+#define CALL_TYPE_DESC			2
+
 
 // -----------------------------------------------------------------------------
 // Command-Prompt Module
@@ -44,7 +48,7 @@
 struct command
 {
 	char name[CMD_NAME_MAX + 1];
-	void (*func)(int argc, char **args);
+	void (*func)(int argc, char **args, int call_type);
 };
 
 static struct command commands[MAX_COMMANDS];
@@ -52,28 +56,24 @@ static int next;
 
 
 // COMMANDS DECLARATIONS
-void clear_cmd(int argc, char **args);
-void print_args_cmd(int argc, char **args);
-void free_text_cmd(int argc, char **args);
-void mmap_cmd(int argc, char **args);
-void just_palloc_cmd(int argc, char **args);
-void proc_view_cmd(int argc, char **args);
-void inf_loop_cmd(int argc, char **args);
-void kill_thread_cmd(int argc, char **args);
-void enum_dev_cmd(int argc, char **args);
-/*
-void print_mdev_port_cmd(int argc, char **args);
-void read_main_dev_cmd(int argc, char **args);
-void write_main_dev_cmd(int argc, char **args);
-void enum_usb_cmd(int argc, char **args);
-*/
-void list_cmd(int argc, char **args);
-void change_dir_cmd(int argc, char **args);
-void read_cmd(int argc, char **args);
+void help_cmd(int argc, char **args, int call_type);
+void clear_cmd(int argc, char **args, int call_type);
+void print_args_cmd(int argc, char **args, int call_type);
+void free_text_cmd(int argc, char **args, int call_type);
+void mmap_cmd(int argc, char **args, int call_type);
+void proc_view_cmd(int argc, char **args, int call_type);
+void inf_loop_cmd(int argc, char **args, int call_type);
+void kill_thread_cmd(int argc, char **args, int call_type);
+void enum_dev_cmd(int argc, char **args, int call_type);
+void list_cmd(int argc, char **args, int call_type);
+void change_dir_cmd(int argc, char **args, int call_type);
+void read_cmd(int argc, char **args, int call_type);
+void delete_cmd(int argc, char **args, int call_type);
+void make_dir_cmd(int argc, char **args, int call_type);
 
 // FUNCTION DECLARATIONS
 void init_command_prompt(void);
-void add_command(char *name, void (*func)(int argc, char **args));
+void add_command(char *name, void (*func)(int argc, char **args, int call_type));
 void exec_command(char *name, int argc, char **args, int w);
 int parse_input(char *input, char **name, char **args);
 void command_prompt(void);
@@ -95,24 +95,20 @@ void init_command_prompt(void)
 	next = 0;
 	
 	// Add commands.
+	add_command("help", &help_cmd);
 	add_command("clear", &clear_cmd);
-	add_command("print-args", &print_args_cmd);
-	add_command("free-text", &free_text_cmd);
+	add_command("args", &print_args_cmd);
+	add_command("write", &free_text_cmd);
 	add_command("mmap", &mmap_cmd);
-	add_command("just-palloc", &just_palloc_cmd);
-	add_command("proc-view", &proc_view_cmd);
-	add_command("inf-loop", &inf_loop_cmd);
-	add_command("kill-thread", &kill_thread_cmd);
+	add_command("pview", &proc_view_cmd);
+	add_command("inf", &inf_loop_cmd);
+	add_command("killth", &kill_thread_cmd);
 	add_command("edev", &enum_dev_cmd);
-	/*
-	add_command("main-dev", &print_mdev_port_cmd);
-	add_command("read-main-dev", &read_main_dev_cmd);
-	add_command("write-main-dev", &write_main_dev_cmd);
-	add_command("enum-usb", &enum_usb_cmd);
-	*/
 	add_command("list", &list_cmd);
 	add_command("cd", &change_dir_cmd);
 	add_command("read", &read_cmd);
+	add_command("del", &delete_cmd);
+	add_command("mkdir", &make_dir_cmd);
 	
 	// Initiate the command-prompt.
 	command_prompt();
@@ -133,7 +129,7 @@ void init_command_prompt(void)
 // Return Value	:	None
 //
 // -----------------------------------------------------------------------------
-void add_command(char *name, void (*func)(int argc, char **args))
+void add_command(char *name, void (*func)(int argc, char **args, int call_type))
 {
 	strcpy(commands[next].name, name);
 	commands[next].func = func;
@@ -180,7 +176,7 @@ void exec_command(char *name, int argc, char **args, int w)
 			{
 				// Within a new thread, call the function and pass the arguments
 				// to it.
-				(*commands[i].func)(argc, args);
+				(*commands[i].func)(argc, args, CALL_TYPE_NORMAL);
 				// When the operation completes, dispose of the thread.
 				dispose_thread();
 			}
@@ -287,13 +283,76 @@ void command_prompt(void)
 
 // COMMANDS
 
-void clear_cmd(int argc, char **args)
+void help_cmd(int argc, char **args, int call_type)
 {
+	uint32_t i;
+	
+	switch (call_type)
+	{
+		case CALL_TYPE_HELP:
+			puts("PRINT HELP INFORMATION\n");
+			return;
+		case CALL_TYPE_DESC:
+			puts("[COMMAND] [COMMAND] [COMMAND] . . .\n");
+			puts("\tCOMMAND\tPRINT INFORMATION ON THIS SPECIFIC COMMAND\n");		
+			return;
+	}
+	
+	if (!argc)
+	{
+		for (i = 0; i < next; i++)
+		{
+			puts(commands[i].name);
+			putc('\t');
+			(*commands[i].func)(0, 0, CALL_TYPE_HELP);
+		}
+		return;
+	}
+	
+	while (argc--)
+	{
+		for (i = 0; i < next; i++)
+		{
+			if (!strcmp(commands[i].name, *args))
+			{
+				puts(commands[i].name);
+				putc(' ');
+				(*commands[i].func)(0, 0, CALL_TYPE_DESC);
+				args++;
+				break;
+			}
+		}
+	}
+}
+
+void clear_cmd(int argc, char **args, int call_type)
+{
+	switch (call_type)
+	{
+		case CALL_TYPE_HELP:
+			puts("CLEAR THE SCREEN\n");
+			return;
+		case CALL_TYPE_DESC:
+			putc('\n');
+			return;
+	}
+	
 	clear_screen();
 }
 
-void print_args_cmd(int argc, char **args)
+void print_args_cmd(int argc, char **args, int call_type)
 {
+	switch (call_type)
+	{
+		case CALL_TYPE_HELP:
+			puts("PRINT THE GIVEN ARGUMENTS\n");
+			return;
+		case CALL_TYPE_DESC:
+			puts("[ARG] [ARG] [ARG] . . .\n");
+			puts("\tARG\tAN ARGUMENT TO BE PRINTED\n");
+			return;
+	}
+	
 	while (argc--)
 	{
 		puts(*args++);
@@ -301,7 +360,7 @@ void print_args_cmd(int argc, char **args)
 	}
 }
 
-void free_text_cmd(int argc, char **args)
+void free_text_cmd(int argc, char **args, int call_type)
 {
 	int c;
 	uint32_t n;
@@ -309,16 +368,31 @@ void free_text_cmd(int argc, char **args)
 	File *f;
 	char *buff;
 	
+	switch (call_type)
+	{
+		case CALL_TYPE_HELP:
+			puts("WRITE TEXT AND SAVE IT TO A FILE\n");
+			return;
+		case CALL_TYPE_DESC:
+			puts("[PATH]\n");
+			puts("\tPATH\tTHE PATH OF THE FILE TO SAVE THE TEXT TO\n");
+			return;
+	}
+	
 	path = 0;
 	while (argc--)
 	{
-		if (startswith(*args, "path="))
-		{
-			path = *args + 5;
-			f = open(path, strlen(path), 'w');
-			if (f)
-				break;
-		}
+		path = get_full_path(*args);
+		f = open(path, strlen(path), 'w');
+		free(path);
+		if (f)
+			break;	
+	}
+	
+	if (path && !f)
+	{
+		puts("Path not found!\n");
+		return;
 	}
 	
 	buff = (char *) palloc();
@@ -361,23 +435,40 @@ void free_text_cmd(int argc, char **args)
 	putc('\n');
 }
 
-void mmap_cmd(int argc, char **args)
+void mmap_cmd(int argc, char **args, int call_type)
 {
+	switch (call_type)
+	{
+		case CALL_TYPE_HELP:
+			puts("PRINT THE MEMORY MAPPING\n");
+			return;
+		case CALL_TYPE_DESC:
+			putc('\n');
+			return;
+	}
+	
 	print_bios_mmap();
 }
 
-void just_palloc_cmd(int argc, char **args)
-{
-	char *buff;
-	buff = malloc(100);
-	puts(itoa((int) palloc(), buff, 16));
-	putc('\n');
-	free(buff);
-}
-
-void proc_view_cmd(int argc, char **args)
+void proc_view_cmd(int argc, char **args, int call_type)
 {
 	int with_pid, with_ppid, with_status, with_threads, with_tid, with_tstatus;
+	
+	switch (call_type)
+	{
+		case CALL_TYPE_HELP:
+			puts("PRINT INFORMATION ABOUT THE RUNNING PROCESSES\n");
+			return;
+		case CALL_TYPE_DESC:
+			puts("[pid] [ppid] [status] [threads] [tid] [tstatus]\n");
+			puts("\tpid\tPRINT THE PROCESS ID OF EACH PROCESS\n");
+			puts("\tppid\tPRINT THE PARENT PROCESS ID OF EACH PROCESS\n");
+			puts("\tstatus\tPRINT THE STATUS OF EACH PROCESS\n");
+			puts("\tthreads\tPRINT THE THREADS OF EACH PROCESS\n");
+			puts("\ttid\tPRINT THE THREAD ID OF EACH THREAD\n");
+			puts("\ttstatus\tPRINT THE STATUS OF EACH THREAD\n");
+			return;
+	}
 	
 	with_pid = with_ppid = with_status = with_threads = with_tid = with_tstatus = 0;
 	while (argc--)
@@ -399,15 +490,37 @@ void proc_view_cmd(int argc, char **args)
 	print_proc_data(with_pid, with_ppid, with_status, with_threads, with_tid, with_tstatus);
 }
 
-void inf_loop_cmd(int argc, char **args)
+void inf_loop_cmd(int argc, char **args, int call_type)
 {
+	switch (call_type)
+	{
+		case CALL_TYPE_HELP:
+			puts("RUN AN INFINITE LOOP\n");
+			return;
+		case CALL_TYPE_DESC:
+			putc('\n');
+			return;
+	}
+	
 	set_idle();
 	while (1) ;
 }
 
-void kill_thread_cmd(int argc, char **args)
+void kill_thread_cmd(int argc, char **args, int call_type)
 {
 	uint32_t pid, tid;
+	
+	switch (call_type)
+	{
+		case CALL_TYPE_HELP:
+			puts("KILL A RUNNING THREAD\n");
+			return;
+		case CALL_TYPE_DESC:
+			puts("pid=PID tid=TID\n");
+			puts("\tPID\tTHE PROCESS ID OF THE THREAD'S PROCESS\n");
+			puts("\tTID\tTHE THREAD ID OF THE THREAD\n");
+			return;
+	}
 	
 	pid = tid = -1;	
 	while (argc--)
@@ -428,96 +541,38 @@ void kill_thread_cmd(int argc, char **args)
 		puts("Invalid parameters.\n");
 }
 
-void enum_dev_cmd(int argc, char **args)
+void enum_dev_cmd(int argc, char **args, int call_type)
 {
+	switch (call_type)
+	{
+		case CALL_TYPE_HELP:
+			puts("LIST THE DEVICES OF THE SYSTEM\n");
+			return;
+		case CALL_TYPE_DESC:
+			putc('\n');
+			return;
+	}
+	
 	print_enum_dev();
 }
 
-/*
-void print_mdev_port_cmd(int argc, char **args)
-{
-	char *buff;
-	
-	if (main_dev)
-	{
-		buff = malloc(10);
-		puts("0x");
-		puts(uitoa(main_dev->base_port, buff, BASE16));
-		putc('\n');
-		free(buff);
-	}
-}
-
-void read_main_dev_cmd(int argc, char **args)
-{
-	uint32_t block, i;
-	void *ptr;
-	uint8_t *ptr8;
-	char *buff;
-	
-	if (main_dev && argc == 1)
-	{
-		block = atoui(*args);
-		
-		ptr = malloc(512);
-		read_bbb(main_dev, block, 1, ptr);
-		ptr8 = ptr;
-		buff = malloc(5);
-		for (i = 0; i < 512; i++)
-		{
-			if (*ptr8 <= 0xF)
-				putc('0');
-			puts(uitoa(*ptr8++, buff, BASE16));
-		}
-		putc('\n');
-		free(buff);
-		//free(ptr);
-	}
-}
-
-void write_main_dev_cmd(int argc, char **args)
-{
-	uint32_t block;
-	void *ptr;
-	int result;
-	char *buff;
-	
-	if (main_dev && argc == 1)
-	{
-		block = atoui(*args);
-		
-		ptr = malloc(512);
-		//read_bbb(main_dev, 0, 1, ptr);
-		*((uint16_t *) (ptr)) = 0xEDE2;
-		
-		result = write_bbb(main_dev, block, 1, ptr);
-		
-		buff = malloc(10);
-		puts(uitoa(result, buff, BASE16));
-		putc('\n');
-		free(buff);
-		free(ptr);
-	}
-}
-
-void enum_usb_cmd(int argc, char **args)
-{
-	UHCIDevice *temp;
-	
-	temp = main_dev;
-	while (temp)
-	{
-		putc(temp->tag);
-		putc('\n');
-		temp = temp->next;
-	}
-}
-*/
-
-void list_cmd(int argc, char **args)
+void list_cmd(int argc, char **args, int call_type)
 {
 	int tree, size;
 	char *path;
+	
+	switch (call_type)
+	{
+		case CALL_TYPE_HELP:
+			puts("LIST DIRECTORY CONTENTS\n");
+			return;
+		case CALL_TYPE_DESC:
+			puts("[tree] [size] [path=PATH]\n");
+			puts("\ttree\tPRINT DIRECTORY STRUCTURE AS A TREE\n");
+			puts("\tsize\tPRINT THE SIZE OF EACH ITEM\n");
+			puts("\tPATH\tTHE PATH OF THE DIRECTORY TO LIST (DEFAULT: WORKING DIRECTORY)\n");
+			return;
+	}
 	
 	path = working_dir;
 	tree = 0;
@@ -535,50 +590,69 @@ void list_cmd(int argc, char **args)
 	list(path, strlen(path), tree, size);
 }
 
-void change_dir_cmd(int argc, char **args)
+void change_dir_cmd(int argc, char **args, int call_type)
 {	
+	char *path;
+	
+	switch (call_type)
+	{
+		case CALL_TYPE_HELP:
+			puts("CHANGE THE WORKING DIRECTORY\n");
+			return;
+		case CALL_TYPE_DESC:
+			puts("PATH\n");
+			puts("\tPATH\tTHE PATH OF THE NEW WORKING DIRECTORY\n");
+			return;
+	}
+	
 	if (argc >= 1)
 	{
-		if (**args == '/')
+		path = get_full_path(*args);
+		if (is_path(path, strlen(path), TYPE_DIR, 0))
 		{
-			if (strlen(*args) == 1)
-			{
-				free((void *) working_dir);
-				working_dir = (char *) malloc(2);
-				*working_dir = '/';
-			}
-			
-			else if (!is_path(*args, strlen(*args), TYPE_DIR, 0))
-			{
-				free((void *) working_dir);
-				working_dir = (char *) malloc(strlen(*args));
-				strcpy(working_dir, *args);
-			}
+			free((void *) working_dir);
+			working_dir = path;
+			return;
 		}
+		free(path);
 	}
+	puts("Path not found!\n");
 }
 
-void read_cmd(int argc, char **args)
+void read_cmd(int argc, char **args, int call_type)
 {
 	char *path;
 	File *f;
 	char *buff;
 	uint32_t i, len;
 	
-	path = 0;
+	switch (call_type)
+	{
+		case CALL_TYPE_HELP:
+			puts("READ A FILE\n");
+			return;
+		case CALL_TYPE_DESC:
+			puts("PATH\n");
+			puts("\tPATH\tTHE PATH OF THE FILE TO READ\n");
+			return;
+	}
+	
+	f = 0;
 	while (argc--)
 	{
-		if (startswith(*args, "path="))
+		path = get_full_path(*args);
+		if (is_path(path, strlen(path), TYPE_FILE, 0))
 		{
-			path = *args + 5;
 			f = open(path, strlen(path), 'r');
-			if (f)
-				break;
+			break;
 		}
+		free(path);
 	}
 	if (!f)
+	{
+		puts("Path not found!\n");
 		return;
-	
+	}
 	clear_screen();
 	buff = (char *) palloc();
 	while ((len = read_from_file(f, 4096, buff)))
@@ -601,4 +675,66 @@ void read_cmd(int argc, char **args)
 	free((void *) f);
 	pfree((void *) buff);
 	putc('\n');
+}
+
+void delete_cmd(int argc, char **args, int call_type)
+{
+	char *path;
+	
+	switch (call_type)
+	{
+		case CALL_TYPE_HELP:
+			puts("DELETE ITEMS\n");
+			return;
+		case CALL_TYPE_DESC:
+			puts("[PATH] [PATH] [PATH] . . .\n");
+			puts("\tPATH\tTHE PATH OF THE TARGET TO DELETE\n");
+			return;
+	}
+	
+	while (argc--)
+	{
+		path = get_full_path(*args);
+		if (is_path(path, strlen(path), TYPE_UNDEFINED, 0))
+		{
+			delete(path, strlen(path));
+		}
+		else
+		{
+			puts(*args);
+			puts(" not found!\n");
+		}
+		args++;
+		free(path);
+	}
+	
+}
+
+void make_dir_cmd(int argc, char **args, int call_type)
+{
+	char *path;
+	int status;
+	
+	switch (call_type)
+	{
+		case CALL_TYPE_HELP:
+			puts("CREATE DIRECTORIES\n");
+			return;
+		case CALL_TYPE_DESC:
+			puts("[PATH] [PATH] [PATH] . . .\n");
+			puts("\tPATH\tTHE PATH OF THE DIRECTORY TO BE CREATED\n");
+			return;
+	}
+	
+	while (argc--)
+	{
+		path = get_full_path(*args);
+		status = create(path, strlen(path), TYPE_DIR);
+		if (status)
+		{
+			puts("Path not found!\n");
+		}
+		free(path);
+		args++;
+	}
 }

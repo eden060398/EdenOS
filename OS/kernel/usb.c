@@ -790,6 +790,7 @@ int run_qh(UHCIDevice *dev)
 {
 	uint16_t temp;
 	TD *td;
+	char *buff;
 	
 	OUTL(dev->base_port + FRBASEADD, (uint32_t) frame_list);
 	INW(temp, dev->base_port + FRNUM);
@@ -803,7 +804,7 @@ int run_qh(UHCIDevice *dev)
 	
 	OUTW(dev->base_port + USBCMD, temp);
 	
-	char *buff = malloc(20);
+	//char *buff = malloc(20);
 	
 	uint32_t c;
 	for (td = (TD *) (data_page + 3 * sizeof(TD)); td <= last_td && last_td; td++)
@@ -821,13 +822,14 @@ int run_qh(UHCIDevice *dev)
 		if (td->status)
 		{
 			CLEAR_INTS();
+			buff = malloc(20);
 			puts("\nUSB ERROR: STATUS = ");
 			puts(uitoa(td->status, buff, BASE2));
 			HALT();
 		}
 	}
 	
-	free(buff);
+	//free(buff);
 	//putc('\n');
 	
 	INW(temp, dev->base_port + USBCMD);

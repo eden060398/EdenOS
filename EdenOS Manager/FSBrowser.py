@@ -26,7 +26,8 @@ class FSBrowser:
                     'import': self.__cmd_import,
                     'export': self.__cmd_export,
                     'format': self.__cmd_format,
-                    'del': self.__cmd_del}
+                    'del': self.__cmd_del,
+                    'mkdir': self.__cmd_mkdir}
 
     def run(self):
         while True:
@@ -163,19 +164,11 @@ class FSBrowser:
 
         for arg in args:
             if arg.startswith('-e'):
-				try:
-					open(arg[2:], 'r').close()
-					ex_path = arg[2:]
-				except IOError:
-					print 'Local path does not exist!'
-                    return
-					"""
                 if os.path.isfile(arg[2:]):
                     ex_path = arg[2:]
                 else:
                     print 'Local path does not exist!'
                     return
-					"""
             elif arg.startswith('-i'):
                 path = os.path.join(os.path.split(arg[2:])[:-1])[0]
                 if arg[2] == '/':
@@ -206,20 +199,12 @@ class FSBrowser:
 
         for arg in args:
             if arg.startswith('-e'):
-				try:
-					open(arg[2:], 'w').close()
-					ex_path = arg[2:]
-				except IOError:
-					print 'Local path does not exist!'
-                    return
-					"""
                 path = os.path.join(os.path.split(arg[2:])[:-1])[0]
                 if os.path.isdir(path):
                     ex_path = arg[2:]
                 else:
                     print 'Local path does not exist!'
                     return
-					"""
             elif arg.startswith('-i'):
                 if arg[2] == '/':
                     in_path = arg[2:]
@@ -259,7 +244,7 @@ class FSBrowser:
 
     def __cmd_del(self, args, desc=False, help=False):
         if desc:
-            print 'del\tDELETE FILE OR FOLDER'
+            print 'del\tDELETE FILE OR DIRECTORY'
             return
         if help:
             print 'del [PATH] [PATH] [PATH] . . .\n' \
@@ -273,4 +258,26 @@ class FSBrowser:
                 path = os.path.join(self.dir, arg)
             if self.fs.is_path(path):
                 self.fs.delete(path)
+            else:
+                print arg + " not found!"
+
+    def __cmd_mkdir(self, args, desc=False, help=False):
+        if desc:
+            print 'mkdir\tCREATE A DIRECTORY'
+            return
+        if help:
+            print 'mkdir [PATH] [PATH] [PATH] . . .\n' \
+                  '\tPATH\t:\tTHE PATH OF THE DIRECTORY TO BE CREATED'
+            return
+
+        for arg in args:
+            if arg[0] == '/':
+                path = arg
+            else:
+                path = os.path.join(self.dir, arg)
+            try:
+                self.fs.make_dir(path)
+            except Exception as e:
+                print e.message
+
 # endregion

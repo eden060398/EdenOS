@@ -348,31 +348,10 @@ class EdenFS:
         if not EdenFS.__has_attr(found_attr, NOT_EMPTY):
             return 0
         lba = self.__get_entry_lba(found[0], found[1])
-        return self.__get_size(lba, found_attr)
+        return self.__get_size(lba)
 
-    def __get_size(self, part_lba, attr):
-        size = 0
-        if EdenFS.__has_attr(attr, IS_DIR):
-            while True:
-                dir_size = self.__get_part_size(part_lba)
-                c = 0
-                for entry in xrange(0, DIR_ENTRIES_PER_PART):
-                    if c >= dir_size:
-                        break
-                    entry_offset = entry * DIR_ENTRY_SIZE + DIR_ENTRIES_OFFSET
-                    entry_attr = self.__get_entry_attr(part_lba, entry_offset)
-                    if EdenFS.__has_attr(entry_attr, PRESENT):
-                        c += 1
-                    else:
-                        continue
-                    lba = self.__get_entry_lba(part_lba, entry_offset, PRESENT, NOT_EMPTY)
-                    if lba is not None:
-                        size += self.__get_size(lba, entry_attr)
-                next_part_lba = self.__get_next_part_lba(part_lba, PRESENT, IS_DIR, NOT_EMPTY)
-                if next_part_lba is None:
-                    return size
-                part_lba = next_part_lba
-        size += self.__get_part_size(part_lba)
+    def __get_size(self, part_lba):
+        size = self.__get_part_size(part_lba)
         next_lba = self.__get_next_part_lba(part_lba, PRESENT, NOT_EMPTY)
         while next_lba is not None:
             size += self.__get_part_size(next_lba)
@@ -398,9 +377,12 @@ class EdenFS:
                 else:
                     entry_type = 'FILE'
                 size = 0
+                size_type = 'bytes'
                 if EdenFS.__has_attr(entry_attr, NOT_EMPTY):
                     entry_lba = self.__get_entry_lba(part_lba, entry_offset)
-                    size = self.__get_size(entry_lba, entry_attr)
+                    size = self.__get_size(entry_lba)
+                    if EdenFS.__has_attr(entry_attr, IS_DIR):
+                        size_type = 'entries'
 
                 if level:
                     output += '    |' * (level - 1) + '    +--- '
@@ -409,7 +391,7 @@ class EdenFS:
                 if put_type:
                     output += ' ({type})'.format(name=entry_name.rstrip('\x00'), type=entry_type, size=size)
                 if put_size:
-                    output += ' ({size} bytes)'.format(size=size)
+                    output += ' ({size} {size_type})'.format(size=size, size_type=size_type)
                 output += '\n'
 
                 if tree and EdenFS.__has_attr(entry_attr, IS_DIR, NOT_EMPTY):

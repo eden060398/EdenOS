@@ -255,6 +255,16 @@ int read_bbb(UHCIDevice *dev, uint32_t block, uint32_t count, void *ptr)
 	
 	data_addr = (uint32_t) ptr;
 	
+	/*
+	//char *buff = malloc(REQUEST_SENSE_LEN);
+	while(test_unit(dev))
+	{
+		wait_ticks(2);
+		//request_sense(dev, buff);
+	}
+	//free(buff);
+	*/
+	
 	add_td(dev, OUT, dev->out_endp, CBW_LEN, (uint32_t) cbw_ptr, DATA_OUT, 0, bulk_out_qh);
 	
 	for (i = 0; i < count * (BLOCK_LEN / dev->in_maxp); i++)
@@ -304,6 +314,16 @@ int write_bbb(UHCIDevice *dev, uint32_t block, uint32_t count, void *ptr)
 	
 	data_addr = (uint32_t) ptr;
 	
+	/*
+	//char *buff = malloc(REQUEST_SENSE_LEN);
+	while(test_unit(dev))
+	{
+		wait_ticks(2);
+		//request_sense(dev, buff);
+	}
+	//free(buff);
+	*/
+	
 	add_td(dev, OUT, dev->out_endp, CBW_LEN, (uint32_t) cbw_ptr, DATA_OUT, 0, bulk_out_qh);
 	
 	for (i = 0; i < count * (BLOCK_LEN / dev->out_maxp); i++)
@@ -328,65 +348,6 @@ int write_bbb(UHCIDevice *dev, uint32_t block, uint32_t count, void *ptr)
 	
 	return result;
 }
-
-/*int write_bbb(UHCIDevice *dev, uint32_t block, uint16_t count, void *ptr)
-{
-	void		*cbw_ptr;
-	void		*csw_ptr;
-	uint32_t	data_addr;
-	uint32_t	written_bytes;
-	uint32_t	i;
-	CBW 		*cbw;
-	CSW 		*csw;
-	TD 			*td;
-	int 		result;
-	
-	cbw_ptr = malloc(CBW_LEN);
-	csw_ptr = malloc(CSW_LEN);
-	
-	cbw = cbw_ptr;
-	cbw->signature = CBW_SIGNATURE;
-	cbw->tag = 0xAABBCCDD;
-	cbw->trans_length = BLOCK_LEN * count;
-	cbw->flags = TO_DEVICE;
-	cbw->lun = 0;
-	cbw->cmd_length = 10;
-	create_write10_packet(cbw_ptr + sizeof(CBW), block, count);
-	
-	add_td(dev, OUT, dev->out_endp, CBW_LEN, (uint32_t) cbw_ptr, DATA_OUT, 0);
-	if (run_qh(dev))
-		return USB_TD_ERROR;
-	
-	data_addr = (uint32_t) ptr;
-	for (i = 0; i < count; i++)
-	{
-		written_bytes = 0;
-		do
-		{
-			reset_qh();
-			td = add_td(dev, OUT, dev->out_endp, BLOCK_LEN - written_bytes, data_addr + written_bytes, DATA_OUT, 0);
-			if (run_qh(dev))
-				return USB_TD_ERROR;
-			written_bytes += (td->act_len + 1) & 0x3FF;
-		} while (written_bytes < BLOCK_LEN);
-		reset_qh();
-		data_addr += BLOCK_LEN;
-	}
-	putc('A');
-	add_td(dev, IN, dev->in_endp, CSW_LEN, (uint32_t) csw_ptr, DATA_IN, 0);
-	
-	if (run_qh(dev))
-		return USB_TD_ERROR;
-	reset_qh();
-	
-	csw = csw_ptr;
-	result = csw->status;
-
-	free(cbw_ptr);
-	free(csw_ptr);
-	
-	return result;
-}*/
 
 int read_capacity(UHCIDevice *dev, uint32_t *cap)
 {
@@ -415,6 +376,16 @@ int read_capacity(UHCIDevice *dev, uint32_t *cap)
 	cbw->cmd_length = 10;
 	create_read_cap10_packet(cbw_ptr + sizeof(CBW));
 	
+	/*
+	//char *buff = malloc(REQUEST_SENSE_LEN);
+	while(test_unit(dev))
+	{
+		wait_ticks(2);
+		//request_sense(dev, buff);
+	}
+	//free(buff);
+	*/
+	
 	add_td(dev, OUT, dev->out_endp, CBW_LEN, (uint32_t) cbw_ptr, DATA_OUT, 0, bulk_out_qh);
 	if (run_qh(dev))
 		return USB_TD_ERROR;
@@ -441,29 +412,6 @@ int read_capacity(UHCIDevice *dev, uint32_t *cap)
 	
 	if (!result)
 		*cap = *((uint32_t *) data);
-	
-	char *buff = malloc(50);
-	for (int i = 0; i < 8; i++)
-	{
-		puts(uitoa(*((uint8_t *) (data + i)), buff, 16));
-		putc(' ');
-	}
-	putc('\n');
-	for (int i = 0; i < CSW_LEN; i++)
-	{
-		puts(uitoa(*((uint8_t *) (csw_ptr + i)), buff, 16));
-		putc(' ');
-	}
-	putc('\n');
-	puts(uitoa(*((uint32_t *) data), buff, 10));
-	putc('\n');
-	puts(uitoa(*((uint32_t *) (data + 4)), buff, 10));
-	putc('\n');
-	puts(uitoa(*((uint32_t *) data), buff, 16));
-	putc('\n');
-	puts(uitoa(*((uint32_t *) (data + 4)), buff, 16));
-	putc('\n');
-	free(buff);
 
 	free(cbw_ptr);
 	free(csw_ptr);

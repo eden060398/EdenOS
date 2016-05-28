@@ -69,7 +69,7 @@ void init_fs(UHCIDevice *dev);
 File *open(char *path, uint32_t len, char mode);
 void list(char *path, uint32_t len, int tree, int size);
 void _list(uint32_t lba, int tree, int size, uint32_t level);
-uint32_t get_size(uint32_t part_lba, int is_dir);
+uint32_t get_size(uint32_t part_lba);
 int create(char *path, uint32_t len, int target_type);
 void delete(char *path, uint32_t len);
 uint32_t read_from_file(File *f, uint32_t count,
@@ -90,6 +90,9 @@ void delete_chain_parts(uint32_t lba);
 uint32_t balloc();
 void bfree(uint32_t lba);
 uint32_t find_in_level(uint8_t level, uint32_t base_lba, uint32_t offset, LevelNode *level_node);
+
+char *join_path(char *first, char *second);
+char *get_full_path(char *s);
 
 UHCIDevice *fs_dev;
 uint32_t block_count;
@@ -222,12 +225,15 @@ void _list(uint32_t lba, int tree, int size, uint32_t level)
 					{
 						buff = (char *) malloc(100);
 						puts(" (");
-						puts(uitoa(get_size(dir->entry[i].addr >> 9, dir->entry[i].addr & IS_DIR), buff, BASE10));
-						puts(" bytes)");
+						puts(uitoa(get_size(dir->entry[i].addr >> 9), buff, BASE10));
 						free((void *) buff);
 					}
 					else
-						puts(" (0 bytes)");
+						puts(" (0");
+					if (dir->entry[i].addr & IS_DIR)
+						puts(" entries)");
+					else
+						puts(" bytes)");
 				}
 				putc('\n');
 				if (tree && (dir->entry[i].addr & NOT_EMPTY) && (dir->entry[i].addr & IS_DIR))
@@ -248,45 +254,16 @@ void _list(uint32_t lba, int tree, int size, uint32_t level)
 	}
 }
 
-uint32_t get_size(uint32_t part_lba, int is_dir)
+uint32_t get_size(uint32_t part_lba)
 {
-	uint32_t size, i, c;
-	DirPart *dir;
+	uint32_t size;
 	FilePart *part;
 	
 	size = 0;
-	
-	if (is_dir)
-	{
-		dir = (DirPart *) malloc(sizeof(DirPart));
-		while (1)
-		{
-			read_bbb(fs_dev, part_lba, 1, (void *) dir);
-			c = 0;
-			for (i = 0; i < DIR_ENTRIES_PER_PART; i++)
-			{
-				if (c >= dir->part_size)
-					break;
-				if (dir->entry[i].addr & PRESENT)
-				{
-					c++;
-					if (dir->entry[i].addr & NOT_EMPTY)
-						size += get_size(dir->entry[i].addr >> 9, dir->entry[i].addr & IS_DIR);
-				}
-			}
-			if (!(dir->next_part & PRESENT) || !(dir->next_part & NOT_EMPTY))
-			{
-				free((void *) dir);
-				return size;
-			}
-			part_lba = dir->next_part >> 9;
-		}
-	}
-	
 	part = (FilePart *) malloc(sizeof(FilePart));
 	while (1)
 	{
-		read_bbb(fs_dev, part_lba, 1, part);
+		read_bbb(fs_dev, part_lba, 1,(void *) part);
 		size += part->part_size;
 		if (!(part->next_part & PRESENT) || !(part->next_part & NOT_EMPTY))
 		{
@@ -590,7 +567,7 @@ int is_path(char *path, uint32_t len, int target_type, int not_empty)
 {
 	uint32_t base_lba, offset;
 	
-	return find_path(path, len, target_type, not_empty, &base_lba, &offset);
+	return !find_path(path, len, target_type, not_empty, &base_lba, &offset);
 }
 
 int find_path(	char *path, uint32_t len, int target_type, int not_empty,
@@ -888,4 +865,68 @@ uint32_t find_in_level(uint8_t level, uint32_t base_lba, uint32_t offset, LevelN
 	}
 	free((void *) bitmap);
 	return 0;
+}
+
+char *join_path(char *first, char *second)
+{
+	uint32_t len, first_len, second_len;
+	char *final;
+	
+	first_len = strlen(first);
+	second_len = strlen(second);
+	
+	while (*(first + (first_len - 1)) == '/')
+		first_len--;
+	while (*second == '/')
+	{
+		second++;
+		second_len--;
+	}
+	
+	len = first_len + second_len + 2;
+	final = malloc(len);
+	memcpy(final, first, first_len);
+	*(final + first_len) = '/';
+	memcpy(final + (first_len + 1), second, second_len);
+	
+	return final;
+}
+
+char *get_full_path(char *s)
+{
+	char *path;
+	
+	
+	if (*s == '/')
+	{
+		path = malloc(strlen(s) + 1);
+		strcpy(path, s);
+		/*
+		if (strlen(s) == 1)
+		{
+			path = (char *) malloc(2);
+			*path = '/';
+		}
+		
+		else if (is_path(s, strlen(s), type, not_empty))
+		{
+			path = (char *) malloc(strlen(s));
+			strcpy(path, s);
+		}
+		
+		else
+			path = 0;
+		*/
+	}
+	else
+	{
+		path = join_path(working_dir, s);
+		/*if (!is_path(path, strlen(path), type, not_empty))
+		{
+			free(path);
+			path = 0;
+		}*/
+	}
+	
+	return path;
 }

@@ -238,10 +238,12 @@ typedef struct file
 void init_fs(UHCIDevice *dev);
 File *open(char *path, uint32_t len, char mode);
 void list(char *path, uint32_t len, int tree, int size);
-uint32_t get_size(uint32_t part_lba, int is_dir);
+uint32_t get_size(uint32_t part_lba);
 int create(char *path, uint32_t len, int target_type);
 void delete(char *path, uint32_t len);
 uint32_t read_from_file(File *f, uint32_t count,
 						char *data);
 void write_to_file(File *f, char *data, uint32_t count);
 int is_path(char *path, uint32_t len, int target_type, int not_empty);
+char *join_path(char *first, char *second);
+char *get_full_path(char *s);
