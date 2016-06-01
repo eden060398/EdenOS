@@ -513,7 +513,7 @@ void change_dir_cmd(int argc, char **args, int call_type) {
 
     if (argc >= 1) {
         path = get_full_path(*args);
-        if (is_path(path, strlen(path), TYPE_DIR, 0)) {
+        if (strlen(path) == 1 || is_path(path, strlen(path), TYPE_DIR, 0)) {
             free((void *) working_dir);
             working_dir = path;
             return;
