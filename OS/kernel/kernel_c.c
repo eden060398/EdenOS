@@ -1,7 +1,4 @@
-#ifndef SYSTEM_H
-#define SYSTEM_H
-	#include <system.h>
-#endif
+#include <system.h>
 
 
 void kernel_main(void)

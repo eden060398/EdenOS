@@ -1,5 +1,4 @@
 # region ---------- IMPORTS ----------
-import struct
 import socket
 import hashlib
 from EdenFSManager import *
@@ -25,94 +24,26 @@ EDENFS_DATA_LEN = EDENFS_DATA_END - EDENFS_DATA_START
 
 #  region ---------- FUNCTIONS ----------
 
-"""
-def is_edenos(dev):
-    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client.connect((IP, PORT))
-
-    client.send(GET_MD5)
-
-    length = struct.unpack('I', client.recv(4))[0]
-    size = struct.unpack('I', client.recv(4))[0]
-    md5_hash = client.recv(length - 4)
-    client.close()
-
-    print 'Verifying OS...'
-    prog = UI.Progress(0)
-    done = 0
-    total = size
-
-    md5 = hashlib.md5()
-    lba = 0
-    if is_edenfs(dev):
-        data = dev.read_blocks(lba=lba, count=1, block_size=BLOCK_SIZE)
-        data = data[:EDENFS_SIGN_OFFSET] + b'\x00' * EDENFS_SIGN_LEN + data[EDENFS_SIGN_OFFSET + EDENFS_SIGN_LEN:]
-        md5.update(data)
-        lba += 1
-        size -= BLOCK_SIZE
-        done += BLOCK_SIZE_BYTES
-        prog.update(done * 100 / total)
-    while size >= BLOCK_SIZE:
-        md5.update(dev.read_blocks(lba=lba, count=1, block_size=BLOCK_SIZE))
-        lba += 1
-        size -= BLOCK_SIZE
-        done += BLOCK_SIZE_BYTES
-        prog.update(done * 100 / total)
-    if size:
-        md5.update(dev.read_blocks(lba=lba, count=1, block_size=BLOCK_SIZE)[:size])
-        done += size
-        prog.update(done * 100 / total)
-    prog.done()
-    print
-
-    return md5.digest() == md5_hash
-
-
-def install_edenos(dev):
-    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client.connect((IP, PORT))
-    client.send(GET_OS)
-
-    length = struct.unpack('I', client.recv(4))[0]
-
-    print 'Installing OS...'
-    prog = UI.Progress(0)
-    done = 0
-    total = length
-
-    lba = 0
-    if is_edenfs(dev):
-        data = client.recv(RECV_LEN)
-        data = data[:EDENFS_SIGN_OFFSET] + EDENFS_SIGN + data[EDENFS_SIGN_OFFSET + EDENFS_SIGN_LEN:]
-        dev.write_blcoks(lba=lba, data=data, block_size=BLOCK_SIZE)
-        lba += RECV_LEN / BLOCK_SIZE
-        length -= RECV_LEN
-        done += RECV_LEN
-        prog.update(done * 100 / total)
-
-    while length >= RECV_LEN:
-        data = client.recv(RECV_LEN)
-        dev.write_blcoks(lba=lba, data=data, block_size=BLOCK_SIZE)
-        lba += RECV_LEN / BLOCK_SIZE
-        length -= RECV_LEN
-        done += RECV_LEN
-        prog.update(done * 100 / total)
-    if length:
-        data = client.recv(length)
-        dev.write_blcoks(lba=lba * BLOCK_SIZE_BYTES, data=data, block_size=1)
-        done += length
-        prog.update(done * 100 / total)
-    prog.done()
-    print
-"""
 # endregion
 
 # region ---------- CLASS ----------
+
+
 class EdenOSClient:
     def __init__(self, dev):
+        """
+        Initializes the EdenOSClient object.
+        :param dev: the device that the client will handle
+        """
+
         self.dev = dev
 
     def is_edenos(self):
+        """
+        Checks whether the device contains EdenOS.
+        :return: whether the device contains EdenOS (boolean)
+        """
+
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.connect((IP, PORT))
 
@@ -156,6 +87,11 @@ class EdenOSClient:
         return md5.digest() == md5_hash
 
     def install_edenos(self):
+        """
+        Installs EdenOS on the device.
+        :return: None
+        """
+
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.connect((IP, PORT))
         client.send(GET_OS)

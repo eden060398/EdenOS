@@ -17,11 +17,21 @@ import os
 
 class EdenOSManager:
     def __init__(self, dev):
+        """
+        Initialize the EdenOSManager object.
+        :param dev: The device that the object will manage
+        """
+
         self.dev = dev
         self.fs = EdenFS(dev)
         self.client = EdenOSClient(dev)
 
     def analyse(self):
+        """
+        Analyse the device.
+        :return: None
+        """
+
         eden_os = self.client.is_edenos()
         if not eden_os:
             print 'The device does not contain EdenOS, or the OS on it is outdated or corrupted.'
@@ -48,6 +58,11 @@ class EdenOSManager:
 
 
 def main():
+    """
+    The main function.
+    :return: None
+    """
+
     devices = find_devs()
 
     print '{count} devices were detected:\n'.format(count=len(devices))
@@ -71,9 +86,6 @@ def main():
         browser.run()
     else:
         print 'No suitable devices were found. Exiting.'
-
-
-
 
 if __name__ == '__main__':
     main()

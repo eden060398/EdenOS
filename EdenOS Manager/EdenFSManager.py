@@ -42,6 +42,12 @@ MAX_READ = 4096
 
 
 def is_edenfs(dev):
+    """
+    Checks whether the device contains EdenFS.
+    :param dev: the device to check
+    :return: whether the device contains EdenFS (boolean)
+    """
+
     return dev.read(EDENFS_SIGN_OFFSET, EDENFS_SIGN_LEN) == EDENFS_SIGN
 # endregion
 
